@@ -80,15 +80,12 @@ CREATE TABLE IF NOT EXISTS surf_spots (
     total_sessions INTEGER DEFAULT 0,
     average_rating DECIMAL(3, 2) DEFAULT 0,
     
-    -- Location indexing
-    geom GEOGRAPHY(POINT, 4326),
-    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create spatial index for efficient location queries
-CREATE INDEX IF NOT EXISTS idx_surf_spots_geom ON surf_spots USING GIST (geom);
+-- Create indexes for efficient location queries
+CREATE INDEX IF NOT EXISTS idx_surf_spots_location ON surf_spots (latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_surf_spots_user_id ON surf_spots (user_id);
 CREATE INDEX IF NOT EXISTS idx_surf_spots_break_type ON surf_spots (break_type);
 
@@ -355,21 +352,6 @@ CREATE TRIGGER update_spot_stats_on_session
     AFTER INSERT OR UPDATE ON surf_sessions 
     FOR EACH ROW 
     EXECUTE FUNCTION update_spot_statistics();
-
--- Function to automatically set geom column for surf spots
-CREATE OR REPLACE FUNCTION set_surf_spot_geom()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.geom = ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Trigger to set geometry
-CREATE TRIGGER set_surf_spot_geom_trigger 
-    BEFORE INSERT OR UPDATE ON surf_spots 
-    FOR EACH ROW 
-    EXECUTE FUNCTION set_surf_spot_geom();
 
 -- Sample data for testing
 INSERT INTO users (username, email, password_hash, first_name, last_name, skill_level) VALUES

@@ -8,6 +8,7 @@
     "web-vitals": "^4.1.1"
   },
   "devDependencies": {
+    "caniuse-lite": "^1.0.30001726",
     "pg": "^8.11.3"
   },
   "scripts": {

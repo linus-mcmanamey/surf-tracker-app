@@ -1,56 +1,76 @@
 import React, { useState, useEffect } from 'react';
+import { surfSpotService } from '../services/api';
 
 const SurfSpots = () => {
   const [spots, setSpots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [newSpot, setNewSpot] = useState({
     name: '',
-    location: '',
+    latitude: '',
+    longitude: '',
     breakType: 'beach',
     skillRequirement: 'beginner',
     description: ''
   });
 
   useEffect(() => {
-    setSpots([
-      {
-        id: 1,
-        name: 'Malibu Beach',
-        location: 'Malibu, CA',
-        breakType: 'beach',
-        skillRequirement: 'intermediate',
-        description: 'Famous right-hand point break'
-      },
-      {
-        id: 2,
-        name: 'Venice Beach',
-        location: 'Venice, CA',
-        breakType: 'beach',
-        skillRequirement: 'beginner',
-        description: 'Gentle beach break perfect for learning'
-      },
-      {
-        id: 3,
-        name: 'Manhattan Beach',
-        location: 'Manhattan Beach, CA',
-        breakType: 'beach',
-        skillRequirement: 'intermediate',
-        description: 'Consistent beach break with good waves'
-      }
-    ]);
+    fetchSurfSpots();
   }, []);
 
-  const handleSubmit = (e) => {
+  const fetchSurfSpots = async () => {
+    try {
+      setLoading(true);
+      const data = await surfSpotService.getAll();
+      setSpots(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching surf spots:', err);
+      setError('Failed to load surf spots. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const id = spots.length + 1;
-    setSpots([...spots, { ...newSpot, id }]);
-    setNewSpot({ name: '', location: '', breakType: 'beach', skillRequirement: 'beginner', description: '' });
-    setShowForm(false);
+    try {
+      const newSpotData = {
+        ...newSpot,
+        latitude: parseFloat(newSpot.latitude),
+        longitude: parseFloat(newSpot.longitude)
+      };
+      
+      await surfSpotService.create(newSpotData);
+      setNewSpot({ 
+        name: '', 
+        latitude: '', 
+        longitude: '', 
+        breakType: 'beach', 
+        skillRequirement: 'beginner', 
+        description: '' 
+      });
+      setShowForm(false);
+      fetchSurfSpots(); // Refresh the list
+    } catch (err) {
+      console.error('Error creating surf spot:', err);
+      setError('Failed to create surf spot. Please try again.');
+    }
   };
 
   const handleInputChange = (e) => {
     setNewSpot({ ...newSpot, [e.target.name]: e.target.value });
   };
+
+  if (loading) {
+    return (
+      <div className="surf-spots">
+        <h2>Surf Spots</h2>
+        <div className="loading">Loading surf spots...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="surf-spots">
@@ -60,6 +80,12 @@ const SurfSpots = () => {
           {showForm ? 'Cancel' : 'Add Spot'}
         </button>
       </div>
+
+      {error && (
+        <div className="error-message">
+          {error}
+        </div>
+      )}
 
       {showForm && (
         <form className="spot-form" onSubmit={handleSubmit}>
@@ -72,10 +98,20 @@ const SurfSpots = () => {
             required
           />
           <input
-            type="text"
-            name="location"
-            placeholder="Location"
-            value={newSpot.location}
+            type="number"
+            step="any"
+            name="latitude"
+            placeholder="Latitude"
+            value={newSpot.latitude}
+            onChange={handleInputChange}
+            required
+          />
+          <input
+            type="number"
+            step="any"
+            name="longitude"
+            placeholder="Longitude"
+            value={newSpot.longitude}
             onChange={handleInputChange}
             required
           />
@@ -109,12 +145,20 @@ const SurfSpots = () => {
         {spots.map(spot => (
           <div key={spot.id} className="spot-card">
             <h3>{spot.name}</h3>
-            <p className="spot-location">{spot.location}</p>
+            <p className="spot-location">{spot.latitude}, {spot.longitude}</p>
             <div className="spot-details">
-              <span className="break-type">{spot.breakType}</span>
-              <span className="skill-level">{spot.skillRequirement}</span>
+              <span className="break-type">{spot.break_type}</span>
+              <span className="skill-level">{spot.skill_requirement}</span>
             </div>
-            <p className="spot-description">{spot.description}</p>
+            <p className="spot-description">{spot.notes}</p>
+            {spot.total_sessions > 0 && (
+              <div className="spot-stats">
+                <span>Sessions: {spot.total_sessions}</span>
+                {spot.average_rating && (
+                  <span>Avg Rating: {parseFloat(spot.average_rating).toFixed(1)}/10</span>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>

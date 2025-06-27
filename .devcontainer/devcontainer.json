@@ -22,7 +22,8 @@
         "ms-vscode.vscode-docker",
         "formulahendry.auto-rename-tag",
         "christian-kohler.path-intellisense",
-        "ms-vscode.vscode-eslint"
+        "ms-vscode.vscode-eslint",
+        "cweijan.vscode-postgresql-client2"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "bash",

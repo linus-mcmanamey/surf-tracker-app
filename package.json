@@ -1,0 +1,40 @@
+{
+  "name": "create-react-app-starter",
+  "version": "0.1.0",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^4.1.1"
+  },
+  "devDependencies": {
+    "pg": "^8.11.3"
+  },
+  "scripts": {
+    "dev": "react-scripts start",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "db:init": "powershell -ExecutionPolicy Bypass -File .devcontainer/init-db.ps1",
+    "db:init:bash": "bash .devcontainer/init-db.sh",
+    "db:connect": "psql -h localhost -U postgres -d postgres"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

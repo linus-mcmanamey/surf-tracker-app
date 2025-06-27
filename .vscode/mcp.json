@@ -1,0 +1,12 @@
+{
+    "servers": {
+
+    "railway": {
+      "command": "npx",
+      "args": ["-y", "@jasontanswe/railway-mcp"],
+      "env": {
+        "RAILWAY_API_TOKEN": "1c85f04d-61a1-4a45-aba2-75824ce110ab"
+      }
+    }
+  }
+}

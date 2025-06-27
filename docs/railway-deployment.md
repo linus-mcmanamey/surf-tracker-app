@@ -2,61 +2,85 @@
 
 ## Overview
 
-This guide covers deploying your Express.js backend API to Railway for production use with your iOS/React Native mobile applications.
+This guide covers deploying your Surf Tracker application to Railway with PostgreSQL database integration for production use.
 
-## Railway Project Setup
+## Prerequisites
 
-### 1. Connect GitHub Repository
+- Railway account (free tier available)
+- GitHub repository with your application
+- Railway CLI (optional but recommended)
+
+## Step 1: Create Railway Project
+
+### 1.1 Connect GitHub Repository
 
 1. Go to [Railway Dashboard](https://railway.app/dashboard)
 2. Click "New Project"
 3. Select "Deploy from GitHub repo"
-4. Connect your repository
+4. Connect your Surf Tracker repository
 5. Railway will automatically detect the Node.js project
 
-### 2. Configure Environment Variables
+### 1.2 Add PostgreSQL Database
 
-In the Railway dashboard, add these environment variables:
+1. In your Railway project dashboard
+2. Click "New Service"
+3. Select "Database"
+4. Choose "PostgreSQL"
+5. Railway will provision a PostgreSQL instance and provide connection details
+
+## Step 2: Configure Environment Variables
+
+In the Railway dashboard, navigate to your service and add these environment variables:
+
+### Required Variables
 
 ```env
 NODE_ENV=production
-PORT=8080
-DATABASE_URL=postgresql://postgres:KfKJihNvAyFSfxAXTehfNXAJDRaWKUOX@crossover.proxy.rlwy.net:43578/railway
+DATABASE_URL=[Railway will auto-populate this from PostgreSQL service]
+FRONTEND_URL=https://your-app-name.up.railway.app
 ```
 
-### 3. Update Backend for Production
+### Optional Performance Variables
 
-#### server/index.js Updates
+```env
+DB_POOL_SIZE=20
+DB_IDLE_TIMEOUT=30000
+DB_CONNECTION_TIMEOUT=2000
+```
 
-```javascript
-const express = require("express");
-const cors = require("cors");
-const { Pool } = require("pg");
-require("dotenv").config();
+## Step 3: Database Initialization
 
-const app = express();
-const port = process.env.PORT || 8080;
+### 3.1 Connect to Railway PostgreSQL
 
-// Enhanced CORS configuration for production
-const corsOptions = {
-  origin:
-    process.env.NODE_ENV === "production"
-      ? ["https://yourdomain.com", "https://www.yourdomain.com"]
-      : ["http://localhost:3000", "http://localhost:19006"], // Include Expo dev server
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
+Use the Railway CLI or connect directly via psql:
 
-app.use(cors(corsOptions));
+```bash
+# Using Railway CLI
+railway login
+railway connect postgresql
+
+# Or using psql directly with connection string from Railway dashboard
+psql "postgresql://username:password@host:port/database"
+```
+
+### 3.2 Run Database Schema
+
+Execute the initialization script:
+
+```sql
+\i database/init.sql
+```
+
+Or copy and paste the contents of `/database/init.sql` into your PostgreSQL client.
 app.use(express.json({ limit: "10mb" }));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
-  });
+res.status(200).json({
+status: "OK",
+timestamp: new Date().toISOString(),
+environment: process.env.NODE_ENV,
+});
 });
 
 // API versioning
@@ -64,26 +88,27 @@ app.use("/api/v1", require("./routes/api"));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    error: "Something went wrong!",
-    message:
-      process.env.NODE_ENV === "development"
-        ? err.message
-        : "Internal server error",
-  });
+console.error(err.stack);
+res.status(500).json({
+error: "Something went wrong!",
+message:
+process.env.NODE_ENV === "development"
+? err.message
+: "Internal server error",
+});
 });
 
 // 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({ error: "Route not found" });
+app.use("\*", (req, res) => {
+res.status(404).json({ error: "Route not found" });
 });
 
 app.listen(port, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${port}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+console.log(`🚀 Server running on port ${port}`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
 });
-```
+
+````
 
 #### Create API Routes Module
 
@@ -123,9 +148,9 @@ router.get("/surf-spots", async (req, res) => {
     const { limit = 50, offset = 0, search } = req.query;
 
     let query = `
-      SELECT id, name, latitude, longitude, break_type, skill_requirement, 
+      SELECT id, name, latitude, longitude, break_type, skill_requirement,
              notes, total_sessions, average_rating, created_at
-      FROM surf_spots 
+      FROM surf_spots
       WHERE is_active = true
     `;
 
@@ -204,7 +229,7 @@ router.get("/sessions", async (req, res) => {
     const { limit = 50, offset = 0, spot_id } = req.query;
 
     let query = `
-      SELECT s.*, ss.name as spot_name 
+      SELECT s.*, ss.name as spot_name
       FROM surf_sessions s
       JOIN surf_spots ss ON s.surf_spot_id = ss.id
       WHERE 1=1
@@ -280,12 +305,12 @@ router.get("/dashboard/stats", async (req, res) => {
         "SELECT AVG(duration_minutes) as avg_session_duration FROM surf_sessions WHERE duration_minutes IS NOT NULL"
       ),
       pool.query(`
-        SELECT ss.name, COUNT(s.id) as session_count 
-        FROM surf_spots ss 
-        LEFT JOIN surf_sessions s ON ss.id = s.surf_spot_id 
-        WHERE ss.is_active = true 
-        GROUP BY ss.id, ss.name 
-        ORDER BY session_count DESC 
+        SELECT ss.name, COUNT(s.id) as session_count
+        FROM surf_spots ss
+        LEFT JOIN surf_sessions s ON ss.id = s.surf_spot_id
+        WHERE ss.is_active = true
+        GROUP BY ss.id, ss.name
+        ORDER BY session_count DESC
         LIMIT 5
       `),
     ]);
@@ -305,7 +330,7 @@ router.get("/dashboard/stats", async (req, res) => {
 });
 
 module.exports = router;
-```
+````
 
 #### Update package.json for Production
 

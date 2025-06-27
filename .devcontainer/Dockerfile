@@ -12,7 +12,7 @@ WORKDIR /workspace
 
 # Copy repository files
 COPY ../ /workspace/
-
+RUN git config --global --add safe.directory /workspace
 # Set correct ownership
 RUN chown -R node:node /workspace
 

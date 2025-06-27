@@ -1,15 +1,39 @@
 const express = require('express');
 const cors = require('cors');
-const { Pool } = require('pg');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+
+const db = require('./services/database');
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Enhanced CORS configuration
+// Security middleware
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  message: 'Too many requests from this IP',
+});
+app.use(limiter);
+
+// Compression middleware
+app.use(compression());
+
+// Enhanced CORS configuration for Railway deployment
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com', 'https://www.yourdomain.com'] 
+    ? [
+        process.env.FRONTEND_URL,
+        /^https:\/\/.*\.up\.railway\.app$/,
+        /^https:\/\/.*\.railway\.app$/
+      ]
     : ['http://localhost:3000', 'http://localhost:19006'],
   credentials: true,
   optionsSuccessStatus: 200
@@ -28,32 +52,24 @@ app.use((req, res, next) => {
   next();
 });
 
-// Enhanced database connection with connection pooling
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
-
-// Test database connection
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Error acquiring client', err.stack);
-  } else {
-    console.log('Connected to PostgreSQL database');
-    release();
+// Health check endpoint with database status
+app.get('/health', async (req, res) => {
+  try {
+    const dbHealth = await db.healthCheck();
+    res.status(200).json({ 
+      status: 'OK', 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: dbHealth
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'ERROR',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: { status: 'unhealthy', error: error.message }
+    });
   }
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
 });
 
 // API Routes
@@ -61,7 +77,7 @@ app.get('/health', (req, res) => {
 // Get all surf spots
 app.get('/api/surf-spots', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await db.query(`
       SELECT id, name, latitude, longitude, break_type, skill_requirement, 
              notes, total_sessions, average_rating, created_at
       FROM surf_spots 
@@ -80,7 +96,7 @@ app.post('/api/surf-spots', async (req, res) => {
   try {
     const { name, latitude, longitude, breakType, skillRequirement, description } = req.body;
     
-    const result = await pool.query(`
+    const result = await db.query(`
       INSERT INTO surf_spots (user_id, name, latitude, longitude, break_type, skill_requirement, notes)
       VALUES (1, $1, $2, $3, $4, $5, $6)
       RETURNING *
@@ -96,7 +112,7 @@ app.post('/api/surf-spots', async (req, res) => {
 // Get all surf sessions
 app.get('/api/surf-sessions', async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await db.query(`
       SELECT s.*, sp.name as spot_name
       FROM surf_sessions s
       LEFT JOIN surf_spots sp ON s.surf_spot_id = sp.id
@@ -117,10 +133,10 @@ app.post('/api/surf-sessions', async (req, res) => {
     } = req.body;
     
     // Find surf spot ID by name
-    const spotResult = await pool.query('SELECT id FROM surf_spots WHERE name = $1', [surfSpot]);
+    const spotResult = await db.query('SELECT id FROM surf_spots WHERE name = $1', [surfSpot]);
     const surfSpotId = spotResult.rows[0]?.id;
     
-    const result = await pool.query(`
+    const result = await db.query(`
       INSERT INTO surf_sessions (
         user_id, surf_spot_id, session_date, duration_minutes, 
         waves_caught, performance_rating, wave_quality_rating, session_notes
@@ -139,7 +155,7 @@ app.post('/api/surf-sessions', async (req, res) => {
 // Get dashboard statistics
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const statsQuery = await pool.query(`
+    const statsQuery = await db.query(`
       SELECT 
         COUNT(*) as total_sessions,
         AVG(performance_rating) as avg_rating,
@@ -152,7 +168,7 @@ app.get('/api/dashboard', async (req, res) => {
       WHERE user_id = 1
     `);
     
-    const recentSessionsQuery = await pool.query(`
+    const recentSessionsQuery = await db.query(`
       SELECT ss.*, sp.name as spot_name
       FROM surf_sessions ss
       LEFT JOIN surf_spots sp ON ss.surf_spot_id = sp.id
@@ -204,12 +220,12 @@ app.listen(port, '0.0.0.0', () => {
 // Graceful shutdown
 process.on('SIGINT', async () => {
   console.log('Shutting down gracefully...');
-  await pool.end();
+  await db.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log('Shutting down gracefully...');
-  await pool.end();
+  await db.close();
   process.exit(0);
 });

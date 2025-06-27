@@ -18,7 +18,11 @@
   "devDependencies": {
     "caniuse-lite": "^1.0.30001726",
     "nodemon": "^3.0.2",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
   },
   "scripts": {
     "dev": "react-scripts start",
@@ -31,9 +35,11 @@
     "eject": "react-scripts eject",
     "api:start": "node server/index.js",
     "api:deploy": "echo 'Deploy to Railway via git push'",
-    "db:init": "powershell -ExecutionPolicy Bypass -File .devcontainer/init-db.ps1",
-    "db:init:bash": "bash .devcontainer/init-db.sh",
-    "db:connect": "psql -h localhost -U postgres -d postgres"
+    "db:connect": "psql -h localhost -U postgres -d postgres",
+    "railway:deploy": "bash scripts/deploy-railway.sh",
+    "railway:logs": "railway logs",
+    "railway:status": "railway status",
+    "railway:connect": "railway connect postgresql"
   },
   "eslintConfig": {
     "extends": [

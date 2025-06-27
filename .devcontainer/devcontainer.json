@@ -44,6 +44,6 @@
       "label": "PostgreSQL Database"
     }
   },
-  "postCreateCommand": "npm install && chmod +x .devcontainer/init-db.sh && git config --global user.email 'linus.mcmanamey@gmail.com' && git config --global user.name 'Linus McManamey'",
+  "postCreateCommand": "npm install && git config --global user.email 'linus.mcmanamey@gmail.com' && git config --global user.name 'Linus McManamey'",
   "remoteUser": "node"
 }

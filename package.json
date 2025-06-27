@@ -3,10 +3,13 @@
   "version": "0.1.0",
   "dependencies": {
     "axios": "^1.10.0",
+    "compression": "^1.7.4",
     "concurrently": "^9.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.0",
-    "express": "^5.1.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
@@ -14,16 +17,20 @@
   },
   "devDependencies": {
     "caniuse-lite": "^1.0.30001726",
+    "nodemon": "^3.0.2",
     "pg": "^8.11.3"
   },
   "scripts": {
     "dev": "react-scripts start",
     "start": "react-scripts start",
     "server": "node server/index.js",
+    "server:dev": "nodemon server/index.js",
     "dev:full": "concurrently \"npm run server\" \"npm run start\"",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
+    "api:start": "node server/index.js",
+    "api:deploy": "echo 'Deploy to Railway via git push'",
     "db:init": "powershell -ExecutionPolicy Bypass -File .devcontainer/init-db.ps1",
     "db:init:bash": "bash .devcontainer/init-db.sh",
     "db:connect": "psql -h localhost -U postgres -d postgres"
